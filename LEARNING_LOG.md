@@ -421,3 +421,44 @@ When hiring managers look at a GitHub repository, they rarely clone it, set up P
 - **PII Scrubbing**: Programmatically removing personally identifiable information (names, emails, phones) from datasets.
 - **Single-Page Application (SPA)**: A web page that interacts with the user by dynamically rewriting the current page rather than loading entire new pages.
 - **Client-Side vs Server-Side**: Code that runs in the user's browser (HTML/JS) versus code that runs on the secure backend server (Python).
+
+
+## Task 9: Provider Fallback Resiliency for Missing Keys
+
+### 1) What I asked for, in one line
+Eliminate crashes when testing providers without configured keys (like Groq) by adding graceful automatic routing to Gemini and push the fix to GitHub.
+
+### 2) What you changed (files + functions)
+- **Files Modified**:
+  - `api/index.py`:
+    - Updated `POST /api/classify` handler to verify whether the requested provider has an environment key present.
+    - Added automated routing: if the requested key is missing, it dynamically routes the call to Gemini (`gemini-3.5-flash`), attaches an informational note (`note`), and returns the successful evaluation with status `200` instead of a 500 error.
+  - `public/index.html`:
+    - Updated dropdown options to clearly indicate that Gemini is active and secondary providers automatically route to Gemini if their individual keys are not set.
+    - Added an informational banner in the testbench results card showing the fallback notice when an unconfigured provider is selected.
+- **Git Commit**: Committed (`a692d3d`) and pushed directly to `main`.
+
+### 3) The logic explained from the basics, as if I'm a beginner
+When a recruiter tests your live website and selects "Groq" or another provider whose key you haven't bought or set up yet, the server would normally crash and show an ugly error message: `GROQ_API_KEY not set in environment`.
+- Instead of showing an error, our smart server now checks: *"Do we have the Groq key? No. But we do have Gemini ready!"*
+- It automatically hands the job over to Gemini, runs the test successfully, and displays a friendly note: *"Key for Groq not configured in Vercel. Automatically routed to Gemini."*
+- This means your demo **never breaks**, no matter what button a recruiter clicks.
+
+### 4) Why this design choice and not another
+- **Dynamic server-side fallback over removing the provider option**: Keeping the 5 providers in the dropdown demonstrates that your evaluation system is designed for multi-model benchmarks, while the fallback ensures zero broken user experiences.
+- **Explicit user notification**: Transparently informing the recruiter that the model was routed to Gemini preserves integrity so they know which model actually generated the response.
+
+### 5) 3 interview questions a recruiter could ask about this, with short answers
+1. **What is graceful degradation in multi-provider LLM applications?**
+   - *Answer*: It is an architectural pattern where a system automatically falls back to an alternative healthy model or provider when the requested primary provider is unconfigured, rate-limited, or unavailable.
+2. **Why should missing API keys not cause uncaught 500 exceptions in public APIs?**
+   - *Answer*: Uncaught exceptions degrade user trust and signal fragile backend design; graceful fallbacks and clear error contracts ensure continuous system availability.
+3. **How do you maintain audit transparency when request routing dynamically changes the executing model?**
+   - *Answer*: By returning telemetry fields (`provider`, `requested_provider`, and `note`) in the API response and surfacing them in the UI so the user knows which model was executed.
+
+### 6) Key terms used, one line each
+- **Graceful Degradation**: The ability of a system to maintain partial or redirected functionality when components fail or are missing.
+- **Provider Routing**: Directing LLM requests to specific model backends based on availability, latency, or cost rules.
+- **500 Internal Server Error**: An HTTP status code indicating that an unhandled error occurred on the server.
+- **Telemetry Transparency**: Explicitly logging and displaying which underlying service actually handled an end-user request.
+- **Hot-Reload Deployment**: Automatically updating a production web application when new commits are pushed to the version control repository.
