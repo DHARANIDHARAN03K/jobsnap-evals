@@ -506,3 +506,40 @@ Previously, our report took every single provider attempt—including ones that 
 - **Infrastructure Telemetry**: Data collected regarding the operational state, errors, and performance of underlying cloud services.
 - **Separation of Concerns**: Software design principle separating operational/network health from application/model accuracy.
 - **Data Integrity**: Ensuring that displayed metrics accurately reflect real-world events without artificial smoothing or fabrication.
+
+
+## Task 11: Verification of Live Testbench & 100% Extraction Match Alignment
+
+### 1) What I asked for, in one line
+Verify if the live testbench output is correct and resolve the discrepancy in the report where `Unknown` on newsletters was counted as a mismatch.
+
+### 2) What you changed (files + functions)
+- **Files Modified**:
+  - `src/checks.py`:
+    - Updated `check_company_match`: when an email is a newsletter, marketing email, or spam with no real hiring company (`expected_company == "Unknown"` or `None`), the check now recognizes `predicted == "Unknown"` as a **correct match** instead of a mismatch.
+  - `reports/index.html` & `public/report.html`:
+    - Recompiled with the updated check. Active Gemini extraction accuracy on valid responses updated from **66.7% → 100.0%**.
+- **Git Commit**: Committed (`148b900`) and pushed to `main`.
+
+### 3) The logic explained from the basics, as if I'm a beginner
+Your live testbench output is working as intended:
+- **Libra AI vs Zennah**: The AI successfully identified `Libra AI` from the body and was not tricked by the historical `Zennah AI` database rows.
+- **The Bug in the Report**: On newsletter emails (which have no company hiring you), the AI correctly returned `"Unknown"`. However, the old comparison function was looking for an actual company name and marked `"Unknown"` as a mismatch. We updated the logic to recognize that when an email is a newsletter, extracting `"Unknown"` is the correct answer.
+
+### 4) Why this design choice and not another
+- **Treating 'Unknown' as a valid non-entity match**: Non-job emails (like newsletters or promotional bootcamps) do not have a hiring company. The classifier's instruction is explicitly to return `"Unknown"`. Grading this as a match rewards the model for resisting false positive extraction.
+
+### 5) 3 interview questions a recruiter could ask about this, with short answers
+1. **How do you evaluate null or unknown predictions in Named Entity Recognition (NER)?**
+   - *Answer*: When the ground truth specifies that no entity is present, predicting `Unknown` or `null` must be scored as a True Negative (match); penalizing it would incentivize models to hallucinate plausible entities.
+2. **What does the 'Anti-Contamination' check verify in your evaluation suite?**
+   - *Answer*: It verifies that the model attributes the company source to the active email body/subject (`source_of_company: "body"`) rather than leaking entities from ancillary prompt context (`context_rows`).
+3. **How does rate-limit backoff logic improve reliability in batch LLM evaluations?**
+   - *Answer*: When calling public LLM endpoints concurrently, quota limits (HTTP 429) can cause dropped calls; automated exponential backoff retries ensure batch benchmark runs complete without data loss.
+
+### 6) Key terms used, one line each
+- **True Negative (TN)**: Correctly predicting the absence of a class or entity when none exists.
+- **Adversarial Context**: Deliberately inserting misleading or conflicting data into the prompt to test model robustness.
+- **Entity Grounding**: Ensuring that extracted names and facts are directly supported by evidence in the source text.
+- **Hallucination Rate**: The percentage of model completions containing fabricated facts not present in the input.
+- **Dual-Gate Validation**: Combining deterministic string normalization checks with semantic LLM-as-judge audits.
