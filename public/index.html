@@ -255,11 +255,11 @@
           <div class="form-group">
             <label>Target Provider</label>
             <select id="provider-select">
-              <option value="gemini" selected>Google Gemini (gemini-3.5-flash) - Active</option>
-              <option value="groq">Groq (Llama 3.3 70B)</option>
-              <option value="cerebras">Cerebras (gpt-oss-120b)</option>
-              <option value="sambanova">SambaNova (Llama 3.1 8B)</option>
-              <option value="openrouter">OpenRouter (Llama 3 8B)</option>
+              <option value="gemini" selected>Google Gemini (gemini-3.5-flash) - Active & Configured</option>
+              <option value="groq">Groq (Llama 3.3 70B) - Falls back to Gemini if no key</option>
+              <option value="cerebras">Cerebras (gpt-oss-120b) - Falls back to Gemini if no key</option>
+              <option value="sambanova">SambaNova (Llama 3.1 8B) - Falls back to Gemini if no key</option>
+              <option value="openrouter">OpenRouter (Llama 3 8B) - Falls back to Gemini if no key</option>
             </select>
           </div>
 
@@ -415,9 +415,10 @@ Libra AI Recruiting Team</textarea>
 
         out.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Latency: <strong>${data.latency_ms} ms</strong></span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Model: <strong>${data.provider}</strong> | Latency: <strong>${data.latency_ms} ms</strong></span>
             <span style="font-size: 0.8rem; color: var(--text-muted);">Source: <code>${mo.source_of_company}</code></span>
           </div>
+          ${data.note ? `<div style="background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); color: var(--warning); padding: 0.5rem; border-radius: 6px; font-size: 0.75rem; margin-bottom: 0.75rem;">ℹ️ ${data.note}</div>` : ''}
 
           <ul class="eval-checklist">
             <li>

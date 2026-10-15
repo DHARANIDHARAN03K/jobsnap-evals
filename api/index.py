@@ -129,7 +129,22 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": f"Unsupported provider: {provider}"})
             return
 
-        call_fn = REAL_PROVIDERS[provider]
+        # Check if the requested provider's key is set; if not, automatically route to Gemini (the active provider)
+        key_env_var = {
+            "gemini": "GEMINI_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "cerebras": "CEREBRAS_API_KEY",
+            "sambanova": "SAMBANOVA_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
+        }.get(provider)
+
+        effective_provider = provider
+        note = None
+        if key_env_var and not os.environ.get(key_env_var):
+            effective_provider = "gemini"
+            note = f"Key for '{provider}' not configured in Vercel. Automatically routed to Gemini (gemini-3.5-flash)."
+
+        call_fn = REAL_PROVIDERS[effective_provider]
 
         # Build prompt exactly as production Lambda does
         body_clean = truncate_at_noise_zone(email_body)
@@ -168,7 +183,9 @@ class handler(BaseHTTPRequestHandler):
 
             self._send_json(200, {
                 "success": True,
-                "provider": provider,
+                "provider": effective_provider,
+                "requested_provider": provider,
+                "note": note,
                 "latency_ms": round(latency_ms, 2),
                 "model_output": result,
                 "evaluation": {
