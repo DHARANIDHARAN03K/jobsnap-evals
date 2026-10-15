@@ -67,9 +67,11 @@ def check_company_match(predicted: str | None, expected: str | None) -> tuple[bo
     pred_clean = (predicted or "").strip()
     exp_clean = (expected or "").strip()
 
-    if not exp_clean:
-        # No ground-truth company: pass trivially
-        return True, "No expected company — skipping check"
+    # If expected company is 'Unknown' or None (e.g. newsletters, spam, non-job emails)
+    if not exp_clean or exp_clean.lower() == "unknown":
+        if not pred_clean or pred_clean.lower() == "unknown":
+            return True, "Both expected and predicted company are Unknown/None"
+        return False, f"Expected no company ('{exp_clean}'), but got '{pred_clean}'"
 
     if not pred_clean or pred_clean.lower() == "unknown":
         return False, f"Predicted company is '{pred_clean}', expected '{exp_clean}'"
