@@ -374,3 +374,50 @@ Previously, our test bench used simple "mock" logic (made-up shortcuts) and list
 - **Context Isolation**: The architectural separation of historical or reference data from the primary target to prevent prompt bleed.
 - **Graceful Degradation**: The ability of a system to continue functioning (or log clean error traces) when third-party services fail or return errors.
 - **Non-blocking I/O**: Executing long-running tasks in parallel threads or coroutines so the main thread remains responsive.
+
+
+## Task 8: Vercel Deployment Architecture & Interactive Recruiter Testbench
+
+### 1) What I asked for, in one line
+Make the project completely ready to push to GitHub and deployable to Vercel with an interactive recruiter testbench and hosted report so hiring teams can test the engine live without leaking credentials.
+
+### 2) What you changed (files + functions)
+- **Files Created/Modified**:
+  - `vercel.json`: Created Vercel configuration routing `/api/*` to serverless Python functions and `/*` to static web files in `public/`.
+  - `requirements.txt`: Created dependency manifest (`pydantic`, `urllib3`) for the Vercel Python runtime.
+  - `api/index.py`: Built lightweight serverless HTTP handler supporting:
+    - `GET /api/cases`: Returns preset benchmark email scenarios (Libra AI vs Zennah AI, Top Jobs noise, Marketing course).
+    - `POST /api/classify`: Runs live entity extraction and hallucination checks using the Lambda intelligence engine.
+  - `public/index.html`: Created clean, modern testbench UI tailored for recruiters and engineering hiring managers with preset scenario buttons, live latency badges, anti-contamination check indicators, and raw telemetry inspection.
+  - `public/report.html`: Exported the full benchmark report to the public root for one-click viewing on the deployed site.
+  - `.env.example`: Created template defining required provider keys for easy onboarding.
+  - `.gitignore`: Ensured `.env` and `data/real/` remain strictly ignored while allowing public web assets to be tracked.
+  - `src/generate_report.py`: Adapted report compiler to use offline heuristic evaluation when generating static HTML so zero external API credits are consumed.
+  - `data/golden.jsonl`: Synchronized with `anonymize_and_build_golden.py` seed cases adhering to exact 9-status schema.
+  - **Git Initialized**: Initialized local git repository, verified `.env` exclusion, and staged/committed initial commit (`ba33eaa`).
+
+### 3) The logic explained from the basics, as if I'm a beginner
+When hiring managers look at a GitHub repository, they rarely clone it, set up Python, and run terminal commands. They want to click a link and see it work:
+- **The Vercel Web App (`public/index.html`)**: We built a web page where a recruiter can click a button (like "Libra AI vs Zennah") and immediately see the AI classify the email in real-time, showing whether it passed or failed the hallucination audit.
+- **The Serverless Backend (`api/index.py`)**: When the recruiter clicks the button on the web page, the web page sends the email to this Python file running in the cloud. It runs our real intelligence engine and returns the answer in JSON.
+- **Security**: The secret API keys are never inside the HTML or JavaScript code that the browser downloads. They are stored securely in Vercel's Environment Variables settings, keeping them safe.
+
+### 4) Why this design choice and not another
+- **Serverless API + Static UI over Streamlit**: Streamlit requires a persistent virtual machine running 24/7 (which can sleep, crash, or incur hosting costs). A Vercel static front-end + serverless Python API boots instantly on demand, scales automatically, and is completely free to host.
+- **One-click preset buttons for recruiters**: Recruiters have limited time. Providing pre-filled buttons demonstrating the exact bug (Libra AI vs Zennah AI) allows them to see the evaluation framework in action in 5 seconds without typing long emails.
+- **Safe credential management**: Storing keys in Vercel environment variables allows the live demo to run using server-side keys without exposing the raw strings to the public client.
+
+### 5) 3 interview questions a recruiter could ask about this, with short answers
+1. **How do you demonstrate an AI evaluation pipeline to non-technical stakeholders or hiring managers?**
+   - *Answer*: By deploying a lightweight interactive web testbench with pre-configured adversarial test scenarios alongside the full benchmark report, allowing instant verification without local setup.
+2. **How does Vercel handle Python serverless functions, and what are the cold-start considerations?**
+   - *Answer*: Vercel packages Python files inside the `api/` directory into AWS Lambda micro-containers configured via `@vercel/python`. Minimizing dependencies (using lightweight libraries like `urllib3` rather than heavy frameworks) keeps cold starts under 800ms.
+3. **How do you ensure secrets and PII are not leaked when publishing an evaluation repository to GitHub?**
+   - *Answer*: By configuring `.gitignore` to block `.env` and `data/real/`, providing a sanitized `.env.example`, and verifying staged files with `git status` prior to making commits.
+
+### 6) Key terms used, one line each
+- **Vercel Serverless Function**: An ephemeral, on-demand cloud function executing code without managing dedicated servers.
+- **Recruiter Testbench**: An interactive browser UI designed for rapid evaluation and demonstration of core AI capabilities.
+- **PII Scrubbing**: Programmatically removing personally identifiable information (names, emails, phones) from datasets.
+- **Single-Page Application (SPA)**: A web page that interacts with the user by dynamically rewriting the current page rather than loading entire new pages.
+- **Client-Side vs Server-Side**: Code that runs in the user's browser (HTML/JS) versus code that runs on the secure backend server (Python).
