@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobSnap Evals &bull; Production LLM Benchmark & Interactive Tester</title>
+  <meta name="description" content="Production evaluation harness, hallucination audit, and regression benchmarks for JobSnap AI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #111827;
+      --card-border: #1f2937;
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 2rem 1.25rem;
+    }
+    .container { max-width: 1160px; margin: 0 auto; }
+    
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    .brand h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .brand p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.35rem; }
+    .header-links { display: flex; gap: 0.75rem; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--card-border); }
+    .btn-outline:hover { background: var(--card-border); }
+
+    /* Highlights / Pitch Grid */
+    .pitch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+    .pitch-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .pitch-card h3 { font-size: 1rem; color: #fff; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
+    .pitch-card p { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* Interactive Demo Section */
+    .demo-section {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 3rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    .demo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .demo-title { font-size: 1.25rem; font-weight: 600; }
+    .preset-selector { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .chip {
+      background: #1f2937;
+      color: var(--text-muted);
+      border: 1px solid #374151;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip.active, .chip:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* Grid for Inputs & Output */
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 850px) {
+      .demo-grid { grid-template-columns: 1fr; }
+    }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem; }
+    input, textarea, select {
+      width: 100%;
+      background: #090d16;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+    textarea { resize: vertical; min-height: 120px; font-family: var(--font-mono); font-size: 0.8rem; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    /* Output Card */
+    .result-box {
+      background: #090d16;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+    }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-pass { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .badge-fail { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+
+    .eval-checklist {
+      list-style: none;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+    }
+    .eval-checklist li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    pre {
+      background: #000;
+      border: 1px solid var(--card-border);
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      overflow-x: auto;
+      color: #cbd5e1;
+      max-height: 250px;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 3rem;
+      border-top: 1px solid var(--card-border);
+      padding-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>JobSnap Evals Engine</h1>
+        <p>Production Evaluation Harness &bull; Context Contamination Auditing &bull; LLM-as-Judge</p>
+      </div>
+      <div class="header-links">
+        <a href="/report.html" class="btn btn-outline" target="_blank">📊 View Full Benchmark Report</a>
+        <a href="https://github.com" class="btn btn-primary" id="github-btn" target="_blank">💻 View on GitHub</a>
+      </div>
+    </header>
+
+    <!-- Recruiter Context & Target Problem -->
+    <div class="pitch-grid">
+      <div class="pitch-card">
+        <h3>🛡️ The Production Challenge</h3>
+        <p>Production email classifiers suffer silent context contamination when user application history bleeds into new incoming emails.</p>
+      </div>
+      <div class="pitch-card">
+        <h3>🎯 The Libra vs Zennah Bug</h3>
+        <p>A user with recent 'Zennah AI' job rows receives an interview from 'Libra AI'. Baseline models hallucinated Zennah AI. Our evaluation suite catches and prevents this.</p>
+      </div>
+      <div class="pitch-card">
+        <h3>⚖️ Calibrated LLM-as-Judge</h3>
+        <p>Dual-gate evaluation combining canonical entity string normalization with a factual faithfulness judge ensuring 0% hallucinated roles or statuses.</p>
+      </div>
+    </div>
+
+    <!-- Interactive Recruiter Testbench -->
+    <div class="demo-section">
+      <div class="demo-header">
+        <div>
+          <div class="demo-title">Live Classifier & Anti-Contamination Testbench</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Test real email inputs against the intelligence engine live in your browser.
+          </p>
+        </div>
+        <div class="preset-selector" id="presets-container">
+          <button class="chip active" onclick="loadPreset(0)">Libra AI vs Zennah</button>
+          <button class="chip" onclick="loadPreset(1)">Top Jobs Rejection Noise</button>
+          <button class="chip" onclick="loadPreset(2)">Marketing False-Positive</button>
+        </div>
+      </div>
+
+      <div class="demo-grid">
+        <!-- Input Column -->
+        <div>
+          <div class="form-group">
+            <label>Target Provider</label>
+            <select id="provider-select">
+              <option value="gemini" selected>Google Gemini (gemini-3.5-flash) - Active</option>
+              <option value="groq">Groq (Llama 3.3 70B)</option>
+              <option value="cerebras">Cerebras (gpt-oss-120b)</option>
+              <option value="sambanova">SambaNova (Llama 3.1 8B)</option>
+              <option value="openrouter">OpenRouter (Llama 3 8B)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Subject Line</label>
+            <input type="text" id="email-subject" value="Next Steps: Machine Learning Engineer at Libra AI">
+          </div>
+
+          <div class="form-group">
+            <label>Sender Address</label>
+            <input type="text" id="email-sender" value="talent@libra-ai.com">
+          </div>
+
+          <div class="form-group">
+            <label>Email Body Text</label>
+            <textarea id="email-body">Hi Jordan,
+
+Thank you for speaking with our team about the Machine Learning Engineer role at Libra AI. We are pleased to invite you to our 45-minute technical screen this Wednesday.
+
+Best regards,
+Libra AI Recruiting Team</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Adversarial Tracked Context (Historical Database Rows)</label>
+            <textarea id="context-rows" style="min-height: 80px;">[
+  {"id": "APP-1092", "company": "Zennah AI", "role": "AI Research Scientist", "status": "Interview"},
+  {"id": "APP-1044", "company": "Zennah AI", "role": "MLOps Architect", "status": "Applied"}
+]</textarea>
+          </div>
+
+          <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.8rem;" id="run-btn" onclick="runLiveClassification()">
+            🚀 Run Live Evaluation Call
+          </button>
+        </div>
+
+        <!-- Output Column -->
+        <div>
+          <div class="result-box">
+            <div class="result-header">
+              <span style="font-weight: 600; font-size: 0.9rem;">Evaluation Outcome</span>
+              <span id="status-badge" class="badge badge-pass">Ready</span>
+            </div>
+
+            <div id="results-content">
+              <p style="color: var(--text-muted); font-size: 0.85rem;">
+                Select a preset scenario or type custom email text, then click <strong>Run Live Evaluation Call</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      JobSnap Evals &bull; Automated Regression Suite &bull; Ready for Vercel Serverless Deployment
+    </footer>
+  </div>
+
+  <script>
+    let activePreset = 0;
+    const presets = [
+      {
+        subject: "Next Steps: Machine Learning Engineer at Libra AI",
+        sender: "talent@libra-ai.com",
+        body: "Hi Jordan,\\n\\nThank you for speaking with our team about the Machine Learning Engineer role at Libra AI. We are pleased to invite you to our 45-minute technical screen this Wednesday.\\n\\nBest regards,\\nLibra AI Recruiting Team",
+        context: `[\\n  {"id": "APP-1092", "company": "Zennah AI", "role": "AI Research Scientist", "status": "Interview"},\\n  {"id": "APP-1044", "company": "Zennah AI", "role": "MLOps Architect", "status": "Applied"}\\n]`,
+        expectedCompany: "Libra AI",
+        expectedStatus: "Interview"
+      },
+      {
+        subject: "Your update from Stripe regarding Backend Engineer role",
+        sender: "jobs-noreply@linkedin.com",
+        body: "Thank you for applying to Stripe. While your experience is impressive, we have decided not to move forward with your candidacy at this time.\\n\\nTop jobs for you:\\n- Senior Dev at Datadog\\n- Infrastructure Engineer at Figma",
+        context: "[]",
+        expectedCompany: "Stripe",
+        expectedStatus: "Rejected"
+      },
+      {
+        subject: "Complete your application for our AI Bootcamp",
+        sender: "admissions@futuretechacademy.io",
+        body: "Dear candidate,\\n\\nYou are invited to apply for our 12-week intensive AI engineering program! Click below to enroll and pay your deposit.",
+        context: "[]",
+        expectedCompany: null,
+        expectedStatus: "Ignore"
+      }
+    ];
+
+    function loadPreset(idx) {
+      activePreset = idx;
+      const chips = document.querySelectorAll(".chip");
+      chips.forEach((c, i) => c.classList.toggle("active", i === idx));
+      const p = presets[idx];
+      document.getElementById("email-subject").value = p.subject;
+      document.getElementById("email-sender").value = p.sender;
+      document.getElementById("email-body").value = p.body.replace(/\\n/g, "\\n");
+      document.getElementById("context-rows").value = p.context.replace(/\\n/g, "\\n");
+    }
+
+    async function runLiveClassification() {
+      const btn = document.getElementById("run-btn");
+      const badge = document.getElementById("status-badge");
+      const out = document.getElementById("results-content");
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Running Model...";
+      badge.className = "badge badge-warn";
+      badge.innerText = "Evaluating";
+
+      try {
+        let ctx = [];
+        try {
+          ctx = JSON.parse(document.getElementById("context-rows").value);
+        } catch(e) {
+          ctx = [];
+        }
+
+        const payload = {
+          provider: document.getElementById("provider-select").value,
+          subject: document.getElementById("email-subject").value,
+          sender: document.getElementById("email-sender").value,
+          body: document.getElementById("email-body").value,
+          existing_jobs_context: ctx,
+          expected_company: presets[activePreset].expectedCompany,
+          expected_status: presets[activePreset].expectedStatus
+        };
+
+        const res = await fetch("/api/classify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          badge.className = "badge badge-fail";
+          badge.innerText = "API Error";
+          out.innerHTML = `
+            <div style="color: var(--danger); font-size: 0.9rem; margin-bottom: 0.5rem; font-weight:600;">Call Failed:</div>
+            <pre>${data.error || "Unknown error"}</pre>
+            <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">Note: Verify your provider API keys in Vercel Environment Variables.</p>
+          `;
+          return;
+        }
+
+        const ev = data.evaluation;
+        const mo = data.model_output;
+        const isPass = ev.company_match && ev.status_match && !ev.is_contaminated && (ev.judge_verdict === "PASS");
+
+        badge.className = isPass ? "badge badge-pass" : "badge badge-fail";
+        badge.innerText = isPass ? "PASS (Zero Hallucination)" : "FAIL";
+
+        out.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Latency: <strong>${data.latency_ms} ms</strong></span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Source: <code>${mo.source_of_company}</code></span>
+          </div>
+
+          <ul class="eval-checklist">
+            <li>
+              <span>${ev.company_match ? "✅" : "❌"}</span>
+              <span><strong>Company:</strong> ${mo.corrected_company_name} (Target: ${presets[activePreset].expectedCompany || 'None'})</span>
+            </li>
+            <li>
+              <span>${ev.status_match ? "✅" : "❌"}</span>
+              <span><strong>Status:</strong> ${mo.status} (Target: ${presets[activePreset].expectedStatus})</span>
+            </li>
+            <li>
+              <span>${!ev.is_contaminated ? "✅" : "❌"}</span>
+              <span><strong>Anti-Contamination:</strong> ${ev.is_contaminated ? "Contaminated by context!" : "No context bleed"}</span>
+            </li>
+            <li>
+              <span>${ev.judge_verdict === "PASS" ? "✅" : "❌"}</span>
+              <span><strong>Judge Verdict:</strong> ${ev.judge_verdict} &bull; <em>${ev.judge_reason}</em></span>
+            </li>
+          </ul>
+
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; font-weight: 600;">Raw JSON Telemetry:</div>
+          <pre>${JSON.stringify(mo, null, 2)}</pre>
+        `;
+
+      } catch (err) {
+        badge.className = "badge badge-fail";
+        badge.innerText = "Network Error";
+        out.innerHTML = `<pre>${err.message}</pre>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🚀 Run Live Evaluation Call";
+      }
+    }
+  </script>
+</body>
+</html>
